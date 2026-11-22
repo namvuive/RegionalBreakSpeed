@@ -1,0 +1,44 @@
+name: RegionalBreakSpeed
+version: ${project.version}
+main: com.namvuive.regionalbreakspeed.RegionalBreakSpeed
+api-version: '1.21'
+author: namvuive
+description: Sets block break speed in configured regions based on an MMOItems stat.
+depend: [MythicLib, MMOItems]
+softdepend: [WorldGuard, WorldEdit, FastAsyncWorldEdit]
+
+commands:
+  regionalbreakspeed:
+    description: RegionalBreakSpeed main command.
+    usage: /<command> help
+    aliases: [rgs]
+
+permissions:
+  regionalbreakspeed.*:
+    description: Grants all RegionalBreakSpeed permissions.
+    default: op
+    children:
+      regionalbreakspeed.help: true
+      regionalbreakspeed.add: true
+      regionalbreakspeed.create: true
+      regionalbreakspeed.remove: true
+      regionalbreakspeed.list: true
+      regionalbreakspeed.reload: true
+  regionalbreakspeed.help:
+    description: Use /rgs help.
+    default: op
+  regionalbreakspeed.add:
+    description: Use /rgs add.
+    default: op
+  regionalbreakspeed.create:
+    description: Use /rgs create.
+    default: op
+  regionalbreakspeed.remove:
+    description: Use /rgs remove.
+    default: op
+  regionalbreakspeed.list:
+    description: Use /rgs list.
+    default: op
+  regionalbreakspeed.reload:
+    description: Use /rgs reload.
+    default: op

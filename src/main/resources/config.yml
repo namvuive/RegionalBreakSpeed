@@ -1,0 +1,32 @@
+# RegionalBreakSpeed configuration
+#
+# default-speed: block_break_speed applied when the block being mined is NOT inside any active region,
+#                or when the item's level matches no entry in the region's break-speed.
+#                Vanilla value is 1.0. Range: 0.0 - 1024.0
+#
+# regions:
+#   <name>:                      # unique name (letters, numbers, '_' and '-'; case-insensitive unique)
+#     world: <world name>        # required
+#     # --- choose ONE type ---
+#     pos1: [x, y, z]            # cuboid corner 1 (inclusive)
+#     pos2: [x, y, z]            # cuboid corner 2 (inclusive)
+#     # worldguard: <region id>  # OR a WorldGuard region id in that world
+#     break-speed:               # <level>: <speed>
+#       0: 0.3                   # optional: items without the stat / below the lowest level
+#       1: 1.0
+#       5: 4.0
+#     priority: 0                # optional, default 0. Higher wins when regions overlap.
+#                                # Same priority: the region declared first in this file wins.
+#
+# Level matching: an item with level N uses the entry with the LARGEST key <= N.
+#   Example with keys 0,1,5: level 0 -> key 0, level 3 -> key 1, level 9 -> key 5.
+#   If no key <= N exists, default-speed is used.
+# The highest-priority region containing the block decides; lower-priority regions are NOT checked.
+#
+# A region is INACTIVE (kept in this file but ignored) if, at load/reload time, its world is not loaded,
+# WorldGuard is not installed (worldguard type), or the WorldGuard region does not exist.
+# Inactive regions are re-checked on every /rgs reload.
+
+default-speed: 1.0
+
+regions: {}
