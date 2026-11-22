@@ -2,6 +2,7 @@ package com.namvuive.regionalbreakspeed.listener;
 
 import com.namvuive.regionalbreakspeed.RegionalBreakSpeed;
 import com.namvuive.regionalbreakspeed.mmoitems.LevelReader;
+import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
@@ -11,10 +12,17 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockDamageEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.inventory.ItemStack;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 public class BreakSpeedListener implements Listener {
 
     private final RegionalBreakSpeed plugin;
+    private final Map<UUID, Double> appliedSpeeds = new HashMap<>();
 
     public BreakSpeedListener(RegionalBreakSpeed plugin) {
         this.plugin = plugin;
@@ -28,21 +36,43 @@ public class BreakSpeedListener implements Listener {
             return;
         }
 
-        int level = LevelReader.getLevel(player.getInventory().getItemInMainHand());
-        double speed = plugin.getRegistry().resolveSpeed(event.getBlock(), level);
+        ItemStack item = player.getInventory().getItemInMainHand();
+        int level = LevelReader.getLevel(item);
+        String group = LevelReader.getGroup(item);
+        Double speed = plugin.getRegistry().resolveSpeed(event.getBlock(), group, level);
 
         AttributeInstance instance = player.getAttribute(Attribute.BLOCK_BREAK_SPEED);
         if (instance == null) {
             return;
         }
-        if (Math.abs(instance.getBaseValue() - speed) < 1.0E-6) {
+
+        if (speed == null) {
+            if (appliedSpeeds.remove(player.getUniqueId()) != null) {
+                instance.setBaseValue(instance.getDefaultValue());
+            }
             return;
         }
-        instance.setBaseValue(speed);
+
+        if (Math.abs(instance.getBaseValue() - speed) >= 1.0E-6) {
+            instance.setBaseValue(speed);
+        }
+        appliedSpeeds.put(player.getUniqueId(), speed);
     }
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
-        RegionalBreakSpeed.resetSpeed(event.getPlayer());
+        Player player = event.getPlayer();
+        appliedSpeeds.remove(player.getUniqueId());
+        RegionalBreakSpeed.resetSpeed(player);
+    }
+
+    public void resetAll() {
+        for (UUID id : new ArrayList<>(appliedSpeeds.keySet())) {
+            Player player = Bukkit.getPlayer(id);
+            if (player != null) {
+                RegionalBreakSpeed.resetSpeed(player);
+            }
+        }
+        appliedSpeeds.clear();
     }
 }

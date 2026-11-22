@@ -5,6 +5,8 @@ import java.util.Map;
 import java.util.NavigableMap;
 
 public record BreakRegion(
+        String group,
+        int groupPriority,
         String name,
         String worldName,
         int priority,

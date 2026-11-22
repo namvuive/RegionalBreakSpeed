@@ -91,11 +91,11 @@ public class RgsCommand implements CommandExecutor, TabCompleter {
     private static String usageFor(String sub) {
         switch (sub) {
             case "add":
-                return "add <world:region> [name]";
+                return "add <group> <world:region> [name]";
             case "create":
-                return "create <name>";
+                return "create <group> <name>";
             case "remove":
-                return "remove <name>";
+                return "remove <group> <name>";
             case "list":
                 return "list [page]";
             case "reload":
@@ -123,12 +123,18 @@ public class RgsCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        if (args.length < 2) {
+        if (args.length < 3) {
             messages().send(sender, "usage-add", "label", label);
             return true;
         }
 
-        String input = args[1];
+        String groupArgument = args[1];
+        if (!NAME_PATTERN.matcher(groupArgument).matches()) {
+            messages().send(sender, "invalid-name", "name", groupArgument, "label", label);
+            return true;
+        }
+
+        String input = args[2];
         int colon = input.indexOf(':');
         if (colon < 0) {
             messages().send(sender, "invalid-format", "label", label);
@@ -154,26 +160,35 @@ public class RgsCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
+        String groupKey = configManager.findGroupKey(groupArgument);
+        if (groupKey == null) {
+            groupKey = groupArgument;
+        }
+
         RegionRegistry registry = plugin.getRegistry();
-        BreakRegion duplicate = registry.findWorldGuardDuplicate(worldName, regionId);
+        BreakRegion duplicate = registry.findWorldGuardDuplicate(groupKey, worldName, regionId);
         if (duplicate != null) {
             messages().send(sender, "wg-region-already-added",
-                    "world", worldName, "region", regionId, "name", duplicate.name(), "label", label);
+                    "world", worldName, "region", regionId, "name", duplicate.name(),
+                    "group", groupKey, "label", label);
             return true;
         }
 
-        String name = args.length >= 3 ? args[2] : regionId;
+        String name = args.length >= 4 ? args[3] : regionId;
         if (!NAME_PATTERN.matcher(name).matches()) {
             messages().send(sender, "invalid-name", "name", name, "label", label);
             return true;
         }
-        if (configManager.findRegionKey(name) != null) {
-            messages().send(sender, "name-exists", "name", name, "label", label);
+        if (configManager.findRegionKey(groupKey, name) != null) {
+            messages().send(sender, "name-exists", "name", name, "group", groupKey, "label", label);
             return true;
         }
 
         YamlConfiguration config = configManager.get();
-        String base = "regions." + name;
+        if (!config.isSet("groups." + groupKey + ".priority")) {
+            config.set("groups." + groupKey + ".priority", 0);
+        }
+        String base = "groups." + groupKey + ".regions." + name;
         config.set(base + ".world", worldName);
         config.set(base + ".worldguard", regionId);
         config.set(base + ".priority", 0);
@@ -185,7 +200,8 @@ public class RgsCommand implements CommandExecutor, TabCompleter {
 
         reloadRegistry();
         messages().send(sender, "added",
-                "world", worldName, "region", regionId, "name", name, "label", label);
+                "world", worldName, "region", regionId, "name", name,
+                "group", groupKey, "label", label);
         return true;
     }
 
@@ -211,18 +227,29 @@ public class RgsCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        if (args.length < 2) {
+        if (args.length < 3) {
             messages().send(sender, "usage-create", "label", label);
             return true;
         }
 
-        String name = args[1];
+        String groupArgument = args[1];
+        if (!NAME_PATTERN.matcher(groupArgument).matches()) {
+            messages().send(sender, "invalid-name", "name", groupArgument, "label", label);
+            return true;
+        }
+
+        String name = args[2];
         if (!NAME_PATTERN.matcher(name).matches()) {
             messages().send(sender, "invalid-name", "name", name, "label", label);
             return true;
         }
-        if (configManager.findRegionKey(name) != null) {
-            messages().send(sender, "name-exists", "name", name, "label", label);
+
+        String groupKey = configManager.findGroupKey(groupArgument);
+        if (groupKey == null) {
+            groupKey = groupArgument;
+        }
+        if (configManager.findRegionKey(groupKey, name) != null) {
+            messages().send(sender, "name-exists", "name", name, "group", groupKey, "label", label);
             return true;
         }
 
@@ -239,7 +266,10 @@ public class RgsCommand implements CommandExecutor, TabCompleter {
         }
 
         YamlConfiguration config = configManager.get();
-        String base = "regions." + name;
+        if (!config.isSet("groups." + groupKey + ".priority")) {
+            config.set("groups." + groupKey + ".priority", 0);
+        }
+        String base = "groups." + groupKey + ".regions." + name;
         config.set(base + ".world", selection.worldName());
         config.set(base + ".pos1", List.of(selection.x1(), selection.y1(), selection.z1()));
         config.set(base + ".pos2", List.of(selection.x2(), selection.y2(), selection.z2()));
@@ -252,6 +282,7 @@ public class RgsCommand implements CommandExecutor, TabCompleter {
 
         reloadRegistry();
         messages().send(sender, "created",
+                "group", groupKey,
                 "name", name,
                 "world", selection.worldName(),
                 "x1", String.valueOf(selection.x1()),
@@ -275,19 +306,31 @@ public class RgsCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        if (args.length < 2) {
+        if (args.length < 3) {
             messages().send(sender, "usage-remove", "label", label);
             return true;
         }
 
-        String key = configManager.findRegionKey(args[1]);
+        String groupArgument = args[1];
+        if (!NAME_PATTERN.matcher(groupArgument).matches()) {
+            messages().send(sender, "invalid-name", "name", groupArgument, "label", label);
+            return true;
+        }
+
+        String groupKey = configManager.findGroupKey(groupArgument);
+        if (groupKey == null) {
+            messages().send(sender, "group-not-found", "group", groupArgument, "label", label);
+            return true;
+        }
+
+        String key = configManager.findRegionKey(groupKey, args[2]);
         if (key == null) {
-            messages().send(sender, "region-not-found", "name", args[1], "label", label);
+            messages().send(sender, "region-not-found", "name", args[2], "label", label);
             return true;
         }
 
         YamlConfiguration config = configManager.get();
-        config.set("regions." + key, null);
+        config.set("groups." + groupKey + ".regions." + key, null);
 
         if (!configManager.save()) {
             messages().send(sender, "save-failed", "label", label);
@@ -295,7 +338,7 @@ public class RgsCommand implements CommandExecutor, TabCompleter {
         }
 
         reloadRegistry();
-        messages().send(sender, "removed", "name", key, "label", label);
+        messages().send(sender, "removed", "group", groupKey, "name", key, "label", label);
         return true;
     }
 
@@ -359,6 +402,8 @@ public class RgsCommand implements CommandExecutor, TabCompleter {
 
         if (region.area() instanceof CuboidArea cuboid) {
             messages().sendRaw(sender, "list-entry-cuboid",
+                    "group", region.group(),
+                    "group-priority", String.valueOf(region.groupPriority()),
                     "name", region.name(),
                     "status", status,
                     "world", region.worldName(),
@@ -372,6 +417,8 @@ public class RgsCommand implements CommandExecutor, TabCompleter {
                     "levels", levels);
         } else if (region.area() instanceof WorldGuardArea area) {
             messages().sendRaw(sender, "list-entry-worldguard",
+                    "group", region.group(),
+                    "group-priority", String.valueOf(region.groupPriority()),
                     "name", region.name(),
                     "status", status,
                     "world", region.worldName(),
@@ -408,10 +455,14 @@ public class RgsCommand implements CommandExecutor, TabCompleter {
     }
 
     private LoadResult reloadRegistry() {
-        return plugin.getRegistry().load(
+        LoadResult result = plugin.getRegistry().load(
                 plugin.getConfigManager().get(),
                 plugin.getLogger(),
                 plugin.getWorldGuardHook());
+        if (plugin.getBreakSpeedListener() != null) {
+            plugin.getBreakSpeedListener().resetAll();
+        }
+        return result;
     }
 
     private Messages messages() {
@@ -437,17 +488,10 @@ public class RgsCommand implements CommandExecutor, TabCompleter {
             String sub = args[0].toLowerCase(Locale.ROOT);
             String prefix = args[1].toLowerCase(Locale.ROOT);
 
-            if (sub.equals("add") && sender.hasPermission("regionalbreakspeed.add")) {
-                WorldGuardHook hook = plugin.getWorldGuardHook();
-                if (hook != null) {
-                    for (String key : hook.getAllRegionKeys()) {
-                        if (key.toLowerCase(Locale.ROOT).startsWith(prefix)) {
-                            result.add(key);
-                        }
-                    }
-                }
-            } else if (sub.equals("remove") && sender.hasPermission("regionalbreakspeed.remove")) {
-                for (String key : plugin.getConfigManager().getRegionKeys()) {
+            if ((sub.equals("add") && sender.hasPermission("regionalbreakspeed.add"))
+                    || (sub.equals("create") && sender.hasPermission("regionalbreakspeed.create"))
+                    || (sub.equals("remove") && sender.hasPermission("regionalbreakspeed.remove"))) {
+                for (String key : plugin.getConfigManager().getGroupKeys()) {
                     if (key.toLowerCase(Locale.ROOT).startsWith(prefix)) {
                         result.add(key);
                     }
@@ -459,6 +503,32 @@ public class RgsCommand implements CommandExecutor, TabCompleter {
                     String page = String.valueOf(i);
                     if (page.startsWith(args[1])) {
                         result.add(page);
+                    }
+                }
+            }
+            return result;
+        }
+
+        if (args.length == 3) {
+            String sub = args[0].toLowerCase(Locale.ROOT);
+            String prefix = args[2].toLowerCase(Locale.ROOT);
+
+            if (sub.equals("add") && sender.hasPermission("regionalbreakspeed.add")) {
+                WorldGuardHook hook = plugin.getWorldGuardHook();
+                if (hook != null) {
+                    for (String key : hook.getAllRegionKeys()) {
+                        if (key.toLowerCase(Locale.ROOT).startsWith(prefix)) {
+                            result.add(key);
+                        }
+                    }
+                }
+            } else if (sub.equals("remove") && sender.hasPermission("regionalbreakspeed.remove")) {
+                String groupKey = plugin.getConfigManager().findGroupKey(args[1]);
+                if (groupKey != null) {
+                    for (String key : plugin.getConfigManager().getRegionKeys(groupKey)) {
+                        if (key.toLowerCase(Locale.ROOT).startsWith(prefix)) {
+                            result.add(key);
+                        }
                     }
                 }
             }

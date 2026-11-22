@@ -87,8 +87,29 @@ public class ConfigManager {
         return config;
     }
 
-    public String findRegionKey(String name) {
-        ConfigurationSection regions = config.getConfigurationSection("regions");
+    public String findGroupKey(String name) {
+        ConfigurationSection groups = config.getConfigurationSection("groups");
+        if (groups == null) {
+            return null;
+        }
+        for (String key : groups.getKeys(false)) {
+            if (key.equalsIgnoreCase(name)) {
+                return key;
+            }
+        }
+        return null;
+    }
+
+    public List<String> getGroupKeys() {
+        ConfigurationSection groups = config.getConfigurationSection("groups");
+        if (groups == null) {
+            return new ArrayList<>();
+        }
+        return new ArrayList<>(groups.getKeys(false));
+    }
+
+    public String findRegionKey(String groupKey, String name) {
+        ConfigurationSection regions = config.getConfigurationSection("groups." + groupKey + ".regions");
         if (regions == null) {
             return null;
         }
@@ -100,8 +121,8 @@ public class ConfigManager {
         return null;
     }
 
-    public List<String> getRegionKeys() {
-        ConfigurationSection regions = config.getConfigurationSection("regions");
+    public List<String> getRegionKeys(String groupKey) {
+        ConfigurationSection regions = config.getConfigurationSection("groups." + groupKey + ".regions");
         if (regions == null) {
             return new ArrayList<>();
         }

@@ -6,6 +6,7 @@ import com.namvuive.regionalbreakspeed.config.Messages;
 import com.namvuive.regionalbreakspeed.hook.WorldEditHook;
 import com.namvuive.regionalbreakspeed.hook.WorldGuardHook;
 import com.namvuive.regionalbreakspeed.listener.BreakSpeedListener;
+import com.namvuive.regionalbreakspeed.mmoitems.RegionalBreakSpeedGroupStat;
 import com.namvuive.regionalbreakspeed.mmoitems.RegionalBreakSpeedLevelStat;
 import com.namvuive.regionalbreakspeed.region.RegionRegistry;
 import net.Indyuce.mmoitems.MMOItems;
@@ -27,11 +28,13 @@ public class RegionalBreakSpeed extends JavaPlugin {
     private RegionRegistry registry;
     private WorldGuardHook worldGuardHook;
     private WorldEditHook worldEditHook;
+    private BreakSpeedListener breakSpeedListener;
 
     @Override
     public void onLoad() {
         try {
             MMOItems.plugin.getStats().register(new RegionalBreakSpeedLevelStat());
+            MMOItems.plugin.getStats().register(new RegionalBreakSpeedGroupStat());
         } catch (Throwable throwable) {
             getLogger().log(Level.SEVERE, "Failed to register MMOItems stat", throwable);
         }
@@ -60,7 +63,8 @@ public class RegionalBreakSpeed extends JavaPlugin {
                     "Running with no regions until config.yml is fixed and /rgs reload is executed.");
         }
 
-        getServer().getPluginManager().registerEvents(new BreakSpeedListener(this), this);
+        breakSpeedListener = new BreakSpeedListener(this);
+        getServer().getPluginManager().registerEvents(breakSpeedListener, this);
 
         RgsCommand command = new RgsCommand(this);
         if (getCommand("regionalbreakspeed") != null) {
@@ -71,6 +75,9 @@ public class RegionalBreakSpeed extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (breakSpeedListener != null) {
+            breakSpeedListener.resetAll();
+        }
         for (Player player : Bukkit.getOnlinePlayers()) {
             resetSpeed(player);
         }
@@ -136,5 +143,9 @@ public class RegionalBreakSpeed extends JavaPlugin {
 
     public WorldEditHook getWorldEditHook() {
         return worldEditHook;
+    }
+
+    public BreakSpeedListener getBreakSpeedListener() {
+        return breakSpeedListener;
     }
 }

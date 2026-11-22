@@ -1,32 +1,45 @@
 # RegionalBreakSpeed configuration
 #
-# default-speed: block_break_speed applied when the block being mined is NOT inside any active region,
-#                or when the item's level matches no entry in the region's break-speed.
-#                Vanilla value is 1.0. Range: 0.0 - 1024.0
+# default-speed: block_break_speed applied when nothing else matches (tool has no group,
+#                the group does not match the winning region, or no break-speed level matches).
+#                Vanilla value is 1.0. Range: -1.0 - 1024.0.
+#                Set to -1 to disable the fallback: the plugin then never applies a default value.
 #
-# regions:
-#   <name>:                      # unique name (letters, numbers, '_' and '-'; case-insensitive unique)
-#     world: <world name>        # required
-#     # --- choose ONE type ---
-#     pos1: [x, y, z]            # cuboid corner 1 (inclusive)
-#     pos2: [x, y, z]            # cuboid corner 2 (inclusive)
-#     # worldguard: <region id>  # OR a WorldGuard region id in that world
-#     break-speed:               # <level>: <speed>
-#       0: 0.3                   # optional: items without the stat / below the lowest level
-#       1: 1.0
-#       5: 4.0
-#     priority: 0                # optional, default 0. Higher wins when regions overlap.
-#                                # Same priority: the region declared first in this file wins.
+# fall-through: when true, if the winning region yields no speed for the item (different group,
+#               or no break-speed entry <= level), the plugin keeps checking lower-priority
+#               regions that also contain the block. Default: false.
 #
-# Level matching: an item with level N uses the entry with the LARGEST key <= N.
+# groups:
+#   <group>:                   # group name (letters, numbers, '_' and '-'; case-insensitive)
+#     priority: 0              # optional, default 0. Higher group priority wins when groups overlap.
+#     regions:
+#       <region>:              # unique region name inside this group
+#         world: <world name>  # required
+#         # --- choose ONE type ---
+#         pos1: [x, y, z]      # cuboid corner 1 (inclusive)
+#         pos2: [x, y, z]      # cuboid corner 2 (inclusive)
+#         # worldguard: <region id>  # OR a WorldGuard region id in that world
+#         break-speed:         # <level>: <speed>
+#           0: 0.3             # optional: items without the stat / below the lowest level
+#           1: 1.0
+#           5: 4.0
+#         priority: 0          # optional, default 0. Higher region priority wins inside the same group.
+#
+# An item must have the "Regional Break Speed Group" stat (regional-break-speed-group) matching
+# a group name to benefit from that group's regions. Items without a group use default-speed.
+#
+# Level matching: an item with level N uses the region entry with the LARGEST key <= N.
 #   Example with keys 0,1,5: level 0 -> key 0, level 3 -> key 1, level 9 -> key 5.
-#   If no key <= N exists, default-speed is used.
-# The highest-priority region containing the block decides; lower-priority regions are NOT checked.
+#
+# Conflict resolution (computed on load): regions are ordered by group priority (desc),
+# then region priority (desc), then file order (asc). The first region containing the block wins.
+# Region names must be unique inside a group; the same name may exist in different groups.
 #
 # A region is INACTIVE (kept in this file but ignored) if, at load/reload time, its world is not loaded,
 # WorldGuard is not installed (worldguard type), or the WorldGuard region does not exist.
 # Inactive regions are re-checked on every /rgs reload.
 
-default-speed: 1.0
+default-speed: -1
+fall-through: false
 
-regions: {}
+groups: {}
