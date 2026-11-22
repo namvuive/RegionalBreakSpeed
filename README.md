@@ -1,56 +1,56 @@
 # RegionalBreakSpeed
 
-Plugin Spigot/Paper 1.21.x dùng để điều chỉnh tốc độ đập block (`BLOCK_BREAK_SPEED`) theo từng region, dựa trên một stat tuỳ chỉnh của MMOItems.
+A Spigot/Paper 1.21.x plugin that adjusts a player's `BLOCK_BREAK_SPEED` attribute per region, driven by a custom MMOItems stat.
 
-## Yêu cầu
+## Requirements
 
 - Java 21
-- Server Spigot / Paper / Purpur / Pufferfish **1.21.3+** (build với Spigot API 1.21.4)
-- Bắt buộc: **MMOItems**, **MythicLib**
-- Không bắt buộc: **WorldGuard**, **WorldEdit** hoặc **FastAsyncWorldEdit**
+- Spigot / Paper / Purpur / Pufferfish **1.21.3+** (built against Spigot API 1.21.4)
+- Required: **MMOItems**, **MythicLib**
+- Optional: **WorldGuard**, **WorldEdit** or **FastAsyncWorldEdit**
 
-## Cài đặt
+## Installation
 
-1. Build hoặc tải `RegionalBreakSpeed-1.0.0.jar`.
-2. Chép jar vào thư mục `plugins/`.
-3. Khởi động server, sau đó kiểm tra 2 file được tạo:
+1. Build or download `RegionalBreakSpeed-1.0.0.jar`.
+2. Drop the jar into the server's `plugins/` folder.
+3. Start the server, then check the generated files:
    - `plugins/RegionalBreakSpeed/config.yml`
    - `plugins/RegionalBreakSpeed/messages.yml`
 
-## Cách hoạt động
+## How it works
 
-Khi người chơi bắt đầu đập một block (`BlockDamageEvent`):
+When a player starts breaking a block (`BlockDamageEvent`):
 
-1. Plugin xác định block nằm trong region nào (nếu có).
-2. Đọc stat `Regional Break Speed Level` trên item ở tay chính.
-3. Tra bảng `break-speed` của region theo quy tắc: **level lớn nhất <= level của item**.
-4. Đặt base value của attribute `BLOCK_BREAK_SPEED` cho người chơi.
+1. The plugin finds the region containing the block, if any.
+2. It reads the `Regional Break Speed Level` stat from the item in the main hand.
+3. It looks up the region's `break-speed` table using the **largest key `<= item level`**.
+4. It sets the base value of the player's `BLOCK_BREAK_SPEED` attribute.
 
-Nếu block không nằm trong region active, hoặc level không khớp entry nào, plugin dùng `default-speed`.
+If the block is outside every active region, or no entry matches the level, `default-speed` is used.
 
-Region hỗ trợ 2 loại:
+Regions support two types:
 
-- **Cuboid**: khai báo trực tiếp bằng `pos1` / `pos2`.
-- **WorldGuard**: tham chiếu tới region WorldGuard trong cùng world.
+- **Cuboid**: defined explicitly with `pos1` / `pos2`.
+- **WorldGuard**: references a WorldGuard region in the same world.
 
-Khi nhiều region chồng nhau: region có `priority` cao hơn thắng; cùng priority thì region khai báo trước trong file thắng. Region thắng không khớp level sẽ dùng `default-speed` (không xét region priority thấp hơn).
+When regions overlap, the higher `priority` wins; on ties, the region declared first in the file wins. If the winning region has no matching level, `default-speed` is used (lower-priority regions are not checked).
 
-## Stat MMOItems
+## MMOItems stat
 
-Stat có ID `REGIONAL_BREAK_SPEED_LEVEL` (key YAML `regional-break-speed-level`, NBT `MMOITEMS_REGIONAL_BREAK_SPEED_LEVEL`).
+The stat ID is `REGIONAL_BREAK_SPEED_LEVEL` (YAML key `regional-break-speed-level`, NBT `MMOITEMS_REGIONAL_BREAK_SPEED_LEVEL`).
 
-- Chỉ dùng cho item loại **TOOL**.
-- Giá trị là số nguyên dương.
-- Stat **không hiển thị trên lore** của item.
-- Có thể sửa tay trong file item của MMOItems, ví dụ:
+- Only available on **TOOL** items.
+- Value must be a positive whole number.
+- The stat is **never shown in item lore**.
+- You can also set it manually in an MMOItems item file, for example:
 
 ```yaml
 regional-break-speed-level: 3
 ```
 
-Số lẻ khi đọc (ví dụ `3.7`) sẽ được làm tròn xuống (`3`).
+Decimal values are floored when read (e.g. `3.7` becomes `3`).
 
-## Cấu hình region
+## Region configuration
 
 ```yaml
 default-speed: 1.0
@@ -74,30 +74,30 @@ regions:
     priority: 1
 ```
 
-- `default-speed`: áp dụng ngoài region hoặc khi level không khớp, hợp lệ trong khoảng `0.0 - 1024.0`.
-- `break-speed`: tuỳ chọn. Nếu bỏ trống/không có, region dùng `default-speed`.
-- `priority`: mặc định `0`.
+- `default-speed`: used outside regions or when no level matches; valid range `0.0`–`1024.0`.
+- `break-speed`: optional. If absent/empty, the region falls back to `default-speed`.
+- `priority`: defaults to `0`.
 
-Region được coi là **inactive** (vẫn giữ trong file nhưng bị bỏ qua) nếu lúc load/reload:
+A region is **inactive** (kept in the file but ignored) if, at load/reload time:
 
-- world chưa được load,
-- WorldGuard chưa cài (với region loại WorldGuard),
-- region WorldGuard chưa tồn tại.
+- its world is not loaded,
+- WorldGuard is not installed (for WorldGuard regions),
+- the WorldGuard region does not exist.
 
-Trạng thái active/inactive chỉ được tính lại khi plugin bật, khi chạy `/rgs reload`, hoặc sau `add` / `create` / `remove`.
+Active/inactive state is only recalculated on plugin startup, `/rgs reload`, or after `add` / `create` / `remove`.
 
-## Lệnh
+## Commands
 
-| Lệnh | Mô tả | Quyền |
+| Command | Description | Permission |
 |---|---|---|
-| `/rgs help` | Danh sách lệnh | `regionalbreakspeed.help` |
-| `/rgs add <world:region> [name]` | Thêm region WorldGuard | `regionalbreakspeed.add` |
-| `/rgs create <name>` | Tạo region cuboid từ vùng chọn WorldEdit | `regionalbreakspeed.create` |
-| `/rgs remove <name>` | Xoá region | `regionalbreakspeed.remove` |
-| `/rgs list [page]` | Liệt kê region (10 region/trang) | `regionalbreakspeed.list` |
-| `/rgs reload` | Reload `config.yml` và `messages.yml` | `regionalbreakspeed.reload` |
+| `/rgs help` | Show the command list | `regionalbreakspeed.help` |
+| `/rgs add <world:region> [name]` | Add a WorldGuard region | `regionalbreakspeed.add` |
+| `/rgs create <name>` | Create a cuboid region from your WorldEdit selection | `regionalbreakspeed.create` |
+| `/rgs remove <name>` | Remove a region | `regionalbreakspeed.remove` |
+| `/rgs list [page]` | List regions (10 per page) | `regionalbreakspeed.list` |
+| `/rgs reload` | Reload `config.yml` and `messages.yml` | `regionalbreakspeed.reload` |
 
-Alias: `/regionalbreakspeed`, `/rgs`.
+Aliases: `/regionalbreakspeed`, `/rgs`.
 
 ## Build
 
@@ -107,9 +107,9 @@ mvn clean package
 
 Output: `target/RegionalBreakSpeed-1.0.0.jar`.
 
-## Lưu ý
+## Notes
 
-- Chỉ dùng API Bukkit/Spigot, không phụ thuộc Paper API hay Adventure.
-- Không shade thư viện; các plugin phụ thuộc đều ở scope `provided`.
-- Không hỗ trợ Folia; mọi xử lý chạy trên main thread.
-- Plugin không có chế độ debug và không log mỗi lần đào.
+- Spigot API only; no Paper API or Adventure dependency.
+- No shading; all dependencies use `provided` scope.
+- Folia is not supported; everything runs on the main thread.
+- No debug mode and no per-block logging.
