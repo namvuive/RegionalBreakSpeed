@@ -24,18 +24,18 @@ RegionalBreakSpeed — Spigot/Paper 1.21.x plugin (Java 21, Maven). Sets the `BL
 
 ## Architecture map
 
-- `RegionalBreakSpeed` — entrypoint: `onLoad` registers both stats; `onEnable` detects hooks, loads config/messages/registry, registers listener + command; `onDisable` resets tracked/all online speeds and clears tracking.
+- `RegionalBreakSpeed` — entrypoint: `onLoad` registers both stats; `onEnable` detects hooks, loads config/messages/registry, registers listener + command; `onDisable` resets tracked speeds only and clears tracking (never touches untracked players).
 - `region/RegionRegistry` — parses `default-speed`, `fall-through` and `groups.*`, records active+inactive regions, indexes active ones by `World#getName()` sorted group priority desc, region priority desc, declaration index asc. `resolveSpeed(block, group, level)` returns `Double` (`null` = leave base value alone). `BreakRegion#speedFor` uses `floorEntry`.
-- `listener/BreakSpeedListener` — `BlockDamageEvent` at `MONITOR`, skips creative/spectator, reads main-hand group+level, tracks plugin-set speeds in `Map<UUID, Double>`, resets once when a `null` result arrives or on quit; `resetAll()` resets tracked players and clears the map.
+- `listener/BreakSpeedListener` — `BlockDamageEvent` at `MONITOR`, skips creative/spectator, reads main-hand group+level via `LevelReader#read` (single NBT parse), tracks plugin-set speeds in `Map<UUID, Double>`, resets once when a `null` result arrives; on quit it resets only if the player was tracked. `resetAll()` resets tracked players and clears the map.
 - `config/ConfigManager` — own `YamlConfiguration`; on syntax error keeps the previous config and sets `broken`, which blocks `add`/`create`/`remove`. Group/region lookup helpers are group-scoped (`findGroupKey`, `getGroupKeys`, `findRegionKey(group, name)`, `getRegionKeys(group)`).
-- `mmoitems/LevelReader` — reads NBT `MMOITEMS_REGIONAL_BREAK_SPEED_LEVEL` (floored, clamped `>= 0`) and `MMOITEMS_REGIONAL_BREAK_SPEED_GROUP` (trimmed; `""` when absent/blank).
+- `mmoitems/LevelReader` — `read(ItemStack)` parses NBT once and returns `ToolData(level, group)`: level from `MMOITEMS_REGIONAL_BREAK_SPEED_LEVEL` (floored, clamped `>= 0`), group from `MMOITEMS_REGIONAL_BREAK_SPEED_GROUP` (trimmed + lowercased; `""` when absent/blank).
 - `command/RgsCommand` — 6 subcommands + tab completion; each subcommand checks `regionalbreakspeed.<sub>`. `add`/`create`/`remove` take a group argument; tab completion suggests groups in arg 2, WG keys in arg 3 for `add`, and group region names in arg 3 for `remove`.
 
 ## Behavior rules that are easy to get wrong
 
 - Region active/inactive is recomputed **only** in `RegionRegistry.load(...)`: startup, `/rgs reload`, and after `add`/`create`/`remove`. Inactive regions stay in config but are never queried while mining. Every reload resets tracked break speeds (`BreakSpeedListener#resetAll`).
 - Region ordering (precomputed once in `load`): group priority desc → region priority desc → declaration index asc. The first containing region whose group matches the item's group and whose `break-speed` has a matching level wins.
-- Group matching is case-insensitive (`equalsIgnoreCase`). Region names and WorldGuard duplicates are only blocked **within the same group**; across groups the same name/region may coexist.
+- Group names are normalized to lowercase end to end: the stat lowercases input before saving NBT, `LevelReader` lowercases the read value, and `RegionRegistry` compares lowercased group names. Two group keys that differ only by case (e.g. `Mine`/`mine`) are a collision — the later one is skipped with a warning. Region names and WorldGuard duplicates are only blocked **within the same group**; across groups the same name/region may coexist.
 - `fall-through: false` (default): the first containing region ends the search; if it yields no speed, use the fallback. `true`: keep checking lower-priority containing regions.
 - Fallback: `default-speed < 0` → return `null` (do not touch the attribute); otherwise return `default-speed`.
 - `default-speed` range is `[-1, 1024]`; invalid → console warning and `-1`. `fall-through` must be boolean; otherwise warning and `false`.

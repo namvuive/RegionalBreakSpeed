@@ -9,6 +9,7 @@ import org.bukkit.World;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class WorldGuardHook {
 
@@ -16,26 +17,24 @@ public class WorldGuardHook {
         return WorldGuard.getInstance().getPlatform().getRegionContainer().get(BukkitAdapter.adapt(world));
     }
 
+    private static ProtectedRegion findRegion(RegionManager manager, String id) {
+        if (manager == null) {
+            return null;
+        }
+        return manager.getRegion(id.toLowerCase(Locale.ROOT));
+    }
+
     public boolean regionExists(World world, String id) {
-        RegionManager manager = regionManager(world);
-        return manager != null && manager.getRegion(id) != null;
+        return findRegion(regionManager(world), id) != null;
     }
 
     public boolean contains(World world, String id, int x, int y, int z) {
-        RegionManager manager = regionManager(world);
-        if (manager == null) {
-            return false;
-        }
-        ProtectedRegion region = manager.getRegion(id);
+        ProtectedRegion region = findRegion(regionManager(world), id);
         return region != null && region.contains(x, y, z);
     }
 
     public String getRegionId(World world, String id) {
-        RegionManager manager = regionManager(world);
-        if (manager == null) {
-            return null;
-        }
-        ProtectedRegion region = manager.getRegion(id);
+        ProtectedRegion region = findRegion(regionManager(world), id);
         return region == null ? null : region.getId();
     }
 

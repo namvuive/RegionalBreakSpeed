@@ -74,6 +74,7 @@ public class RegionRegistry {
         ConfigurationSection groupsSection = cfg.getConfigurationSection("groups");
         if (groupsSection != null) {
             int index = 0;
+            Set<String> seenGroups = new HashSet<>();
             for (String groupName : groupsSection.getKeys(false)) {
                 ConfigurationSection groupSection = groupsSection.getConfigurationSection(groupName);
                 if (groupSection == null) {
@@ -82,6 +83,11 @@ public class RegionRegistry {
                 }
                 if (!NAME_PATTERN.matcher(groupName).matches()) {
                     log.warning("Group '" + groupName + "' skipped: invalid name");
+                    continue;
+                }
+                if (!seenGroups.add(groupName.toLowerCase(Locale.ROOT))) {
+                    log.warning("Group '" + groupName
+                            + "' skipped: duplicate name (group names are case-insensitive)");
                     continue;
                 }
 
@@ -270,11 +276,7 @@ public class RegionRegistry {
         if (obj instanceof Integer integerPriority) {
             return integerPriority;
         }
-        if (obj instanceof Long longPriority) {
-            if (longPriority >= Integer.MIN_VALUE && longPriority <= Integer.MAX_VALUE) {
-                return longPriority.intValue();
-            }
-        } else if (obj instanceof Number number) {
+        if (obj instanceof Number number) {
             double value = number.doubleValue();
             if (value == Math.floor(value)
                     && value >= Integer.MIN_VALUE && value <= Integer.MAX_VALUE) {
@@ -329,7 +331,8 @@ public class RegionRegistry {
             if (!region.area().contains(block.getWorld(), x, y, z)) {
                 continue;
             }
-            if (group != null && !group.isEmpty() && region.group().equalsIgnoreCase(group)) {
+            if (group != null && !group.isEmpty()
+                    && region.group().toLowerCase(Locale.ROOT).equals(group)) {
                 Double speed = region.speedFor(level);
                 if (speed != null) {
                     return speed;
@@ -348,7 +351,7 @@ public class RegionRegistry {
 
     public BreakRegion findWorldGuardDuplicate(String group, String world, String regionId) {
         for (BreakRegion region : recorded) {
-            if (region.group().equalsIgnoreCase(group)
+            if (region.group().toLowerCase(Locale.ROOT).equals(group.toLowerCase(Locale.ROOT))
                     && region.area() instanceof WorldGuardArea area
                     && region.worldName().equals(world)
                     && area.regionId().equalsIgnoreCase(regionId)) {

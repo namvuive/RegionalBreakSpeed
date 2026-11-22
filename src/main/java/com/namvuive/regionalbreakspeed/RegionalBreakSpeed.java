@@ -78,9 +78,6 @@ public class RegionalBreakSpeed extends JavaPlugin {
         if (breakSpeedListener != null) {
             breakSpeedListener.resetAll();
         }
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            resetSpeed(player);
-        }
     }
 
     private void detectHooks() {

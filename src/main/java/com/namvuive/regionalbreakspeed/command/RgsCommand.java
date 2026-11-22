@@ -128,7 +128,7 @@ public class RgsCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        String groupArgument = args[1];
+        String groupArgument = args[1].toLowerCase(Locale.ROOT);
         if (!NAME_PATTERN.matcher(groupArgument).matches()) {
             messages().send(sender, "invalid-name", "name", groupArgument, "label", label);
             return true;
@@ -185,10 +185,8 @@ public class RgsCommand implements CommandExecutor, TabCompleter {
         }
 
         YamlConfiguration config = configManager.get();
-        if (!config.isSet("groups." + groupKey + ".priority")) {
-            config.set("groups." + groupKey + ".priority", 0);
-        }
-        String base = "groups." + groupKey + ".regions." + name;
+        ensureGroupPriority(config, groupKey);
+        String base = regionPath(groupKey, name);
         config.set(base + ".world", worldName);
         config.set(base + ".worldguard", regionId);
         config.set(base + ".priority", 0);
@@ -232,7 +230,7 @@ public class RgsCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        String groupArgument = args[1];
+        String groupArgument = args[1].toLowerCase(Locale.ROOT);
         if (!NAME_PATTERN.matcher(groupArgument).matches()) {
             messages().send(sender, "invalid-name", "name", groupArgument, "label", label);
             return true;
@@ -266,10 +264,8 @@ public class RgsCommand implements CommandExecutor, TabCompleter {
         }
 
         YamlConfiguration config = configManager.get();
-        if (!config.isSet("groups." + groupKey + ".priority")) {
-            config.set("groups." + groupKey + ".priority", 0);
-        }
-        String base = "groups." + groupKey + ".regions." + name;
+        ensureGroupPriority(config, groupKey);
+        String base = regionPath(groupKey, name);
         config.set(base + ".world", selection.worldName());
         config.set(base + ".pos1", List.of(selection.x1(), selection.y1(), selection.z1()));
         config.set(base + ".pos2", List.of(selection.x2(), selection.y2(), selection.z2()));
@@ -311,7 +307,7 @@ public class RgsCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        String groupArgument = args[1];
+        String groupArgument = args[1].toLowerCase(Locale.ROOT);
         if (!NAME_PATTERN.matcher(groupArgument).matches()) {
             messages().send(sender, "invalid-name", "name", groupArgument, "label", label);
             return true;
@@ -330,7 +326,7 @@ public class RgsCommand implements CommandExecutor, TabCompleter {
         }
 
         YamlConfiguration config = configManager.get();
-        config.set("groups." + groupKey + ".regions." + key, null);
+        config.set(regionPath(groupKey, key), null);
 
         if (!configManager.save()) {
             messages().send(sender, "save-failed", "label", label);
@@ -463,6 +459,17 @@ public class RgsCommand implements CommandExecutor, TabCompleter {
             plugin.getBreakSpeedListener().resetAll();
         }
         return result;
+    }
+
+    private static String regionPath(String groupKey, String name) {
+        return "groups." + groupKey + ".regions." + name;
+    }
+
+    private static void ensureGroupPriority(YamlConfiguration config, String groupKey) {
+        String path = "groups." + groupKey + ".priority";
+        if (!config.isSet(path)) {
+            config.set(path, 0);
+        }
     }
 
     private Messages messages() {

@@ -10,7 +10,7 @@
 #               regions that also contain the block. Default: false.
 #
 # groups:
-#   <group>:                   # group name (letters, numbers, '_' and '-'; case-insensitive)
+#   <group>:                   # group name (letters, numbers, '_' and '-'; stored lowercased)
 #     priority: 0              # optional, default 0. Higher group priority wins when groups overlap.
 #     regions:
 #       <region>:              # unique region name inside this group
@@ -33,6 +33,7 @@
 #
 # Conflict resolution (computed on load): regions are ordered by group priority (desc),
 # then region priority (desc), then file order (asc). The first region containing the block wins.
+# Group names must be unique case-insensitively (e.g. 'Mine' and 'mine' collide; the later one is skipped).
 # Region names must be unique inside a group; the same name may exist in different groups.
 #
 # A region is INACTIVE (kept in this file but ignored) if, at load/reload time, its world is not loaded,

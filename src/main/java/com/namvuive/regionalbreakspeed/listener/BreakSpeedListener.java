@@ -37,9 +37,8 @@ public class BreakSpeedListener implements Listener {
         }
 
         ItemStack item = player.getInventory().getItemInMainHand();
-        int level = LevelReader.getLevel(item);
-        String group = LevelReader.getGroup(item);
-        Double speed = plugin.getRegistry().resolveSpeed(event.getBlock(), group, level);
+        LevelReader.ToolData tool = LevelReader.read(item);
+        Double speed = plugin.getRegistry().resolveSpeed(event.getBlock(), tool.group(), tool.level());
 
         AttributeInstance instance = player.getAttribute(Attribute.BLOCK_BREAK_SPEED);
         if (instance == null) {
@@ -62,8 +61,9 @@ public class BreakSpeedListener implements Listener {
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
-        appliedSpeeds.remove(player.getUniqueId());
-        RegionalBreakSpeed.resetSpeed(player);
+        if (appliedSpeeds.remove(player.getUniqueId()) != null) {
+            RegionalBreakSpeed.resetSpeed(player);
+        }
     }
 
     public void resetAll() {

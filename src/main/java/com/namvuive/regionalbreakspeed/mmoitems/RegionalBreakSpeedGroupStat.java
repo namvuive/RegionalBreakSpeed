@@ -6,6 +6,8 @@ import net.Indyuce.mmoitems.stat.data.StringData;
 import net.Indyuce.mmoitems.stat.type.StringStat;
 import org.bukkit.Material;
 
+import java.util.Locale;
+
 public class RegionalBreakSpeedGroupStat extends StringStat {
 
     public static final String ID = "REGIONAL_BREAK_SPEED_GROUP";
@@ -24,7 +26,7 @@ public class RegionalBreakSpeedGroupStat extends StringStat {
 
     @Override
     public void whenInput(EditionInventory inv, String message, Object... info) {
-        String trimmed = message.trim();
+        String trimmed = message.trim().toLowerCase(Locale.ROOT);
         if (!trimmed.matches(NAME_PATTERN)) {
             throw new IllegalArgumentException("Group name may only contain letters, numbers, '_' and '-'.");
         }

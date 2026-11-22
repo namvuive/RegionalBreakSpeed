@@ -7,6 +7,10 @@ import org.bukkit.plugin.Plugin;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
@@ -74,11 +78,24 @@ public class ConfigManager {
     }
 
     public boolean save() {
+        Path target = configFile.toPath();
+        Path temporary = target.resolveSibling(configFile.getName() + ".tmp");
         try {
-            config.save(configFile);
+            config.save(temporary.toFile());
+            try {
+                Files.move(temporary, target,
+                        StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (AtomicMoveNotSupportedException exception) {
+                Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING);
+            }
             return true;
         } catch (IOException exception) {
             plugin.getLogger().log(Level.SEVERE, "Failed to save config.yml", exception);
+            try {
+                Files.deleteIfExists(temporary);
+            } catch (IOException ignored) {
+                // nothing else we can do
+            }
             return false;
         }
     }
